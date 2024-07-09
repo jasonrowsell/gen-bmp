@@ -22,10 +22,24 @@ func TestNewImage(t *testing.T) {
 	}
 
 	c := Color{R: 0.4, G: 0.5, B: 0.6}
-	img.SetColor(c, 9, 4)
-	retrieved := img.GetColor(9, 4)
-
+	err := img.SetColor(c, 9, 4)
+	if err != nil {
+		t.Errorf("Unexpected error setting color: %v", err)
+	}
+	retrieved, err := img.GetColor(9, 4)
+	if err != nil {
+		t.Errorf("Unexpected error getting color: %v", err)
+	}
 	if retrieved != c {
 		t.Errorf("Expected color %v, got %v", c, retrieved)
+	}
+
+	err = img.SetColor(c, 10, 5)
+	if err == nil {
+		t.Errorf("Expected error for out-of-bounds set, got nil")
+	}
+	_, err = img.GetColor(10, 5)
+	if err == nil {
+		t.Errorf("Expected error for out-of-bounds get, got nil")
 	}
 }
