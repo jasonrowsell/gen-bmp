@@ -1,2 +1,2 @@
 test:
-	go test ./cmd
+	go test -v ./cmd
