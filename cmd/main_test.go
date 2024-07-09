@@ -20,4 +20,12 @@ func TestNewImage(t *testing.T) {
 			t.Errorf("Expected Colors columns %d, got %d", 10, len(img.Colors[i]))
 		}
 	}
+
+	c := Color{R: 0.4, G: 0.5, B: 0.6}
+	img.SetColor(c, 9, 4)
+	retrieved := img.GetColor(9, 4)
+
+	if retrieved != c {
+		t.Errorf("Expected color %v, got %v", c, retrieved)
+	}
 }
