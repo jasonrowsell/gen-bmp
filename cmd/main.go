@@ -68,5 +68,18 @@ func (img *Image) Export(path string) error {
 	binary.Write(f, binary.LittleEndian, uint32(0))  // Reserved
 	binary.Write(f, binary.LittleEndian, uint32(54)) // Pixel data offset (14+40)
 
+	// DIB header (40 B)
+	binary.Write(f, binary.LittleEndian, uint32(40)) // DIB header size
+	binary.Write(f, binary.LittleEndian, uint32(img.Width))
+	binary.Write(f, binary.LittleEndian, uint32(img.Height))
+	binary.Write(f, binary.LittleEndian, uint16(1))   // Color planes
+	binary.Write(f, binary.LittleEndian, uint16(24))  // Bits per pixel
+	binary.Write(f, binary.LittleEndian, uint32(0))   // BI_RGB: No compression
+	binary.Write(f, binary.LittleEndian, uint32(16))  // Image size
+	binary.Write(f, binary.LittleEndian, int64(2835)) // Horizontal resolution (72 dpi)
+	binary.Write(f, binary.LittleEndian, int64(2835)) // Vertical resolution (72 dpi)
+	binary.Write(f, binary.LittleEndian, uint32(0))   // Colors in color table
+	binary.Write(f, binary.LittleEndian, uint32(0))   // Important color count
+
 	return nil
 }
