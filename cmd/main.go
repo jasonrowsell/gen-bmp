@@ -81,5 +81,22 @@ func (img *Image) Export(path string) error {
 	binary.Write(f, binary.LittleEndian, uint32(0))   // Colors in color table
 	binary.Write(f, binary.LittleEndian, uint32(0))   // Important color count
 
+	// Pixel data
+	padding := (4 - (img.Width*3)%4) % 4
+	for y := img.Height - 1; y >= 0; y-- {
+		for x := 0; x < img.Width; x++ {
+			c, err := img.GetColor(x, y)
+			if err != nil {
+				f.Write([]byte{
+					byte(c.B * 255),
+					byte(c.G * 255),
+					byte(c.R * 255),
+				})
+
+			}
+		}
+		// Add padding to ensure each row is a multiple of 4 bytes
+		f.Write(make([]byte, padding))
+	}
 	return nil
 }
