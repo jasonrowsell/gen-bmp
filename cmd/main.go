@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
+	"os"
 )
 
 type Color struct {
@@ -46,4 +48,25 @@ func NewImage(h, w int) *Image {
 	}
 
 	return img
+}
+
+func (img *Image) Export(path string) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+	defer f.Close()
+
+	// BMP header 14 B
+	// DIB header 40 B
+	// pixel data 3 B per pixel (BGR)
+	filesize := 14 + 40 + 3*img.Width*img.Height
+
+	// BMP file header (14 B)
+	f.Write([]byte("BM")) // Signature
+	binary.Write(f, binary.LittleEndian, uint32(filesize))
+	binary.Write(f, binary.LittleEndian, uint32(0))  // Reserved
+	binary.Write(f, binary.LittleEndian, uint32(54)) // Pixel data offset (14+40)
+
+	return nil
 }
