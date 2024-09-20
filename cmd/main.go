@@ -54,27 +54,16 @@ func (img *Image) Export(path string) error {
 	}
 	defer f.Close()
 
-	// BMP header 14 B + DIB header 40 B + Pixel data 3 B per pixel (BGR)
-	filesize := 14 + 40 + 3*img.Width*img.Height
-	// Pixel data offset (14+40)
-	pixelDataOffset := 54
+	filesize := 14 + 40 + 3*img.Width*img.Height // BMP header + DIB header + pixel data
+	pixelDataOffset := 54                        // Pixel data offset (14+40)
 
 	if err := writeBMPHeader(f, filesize, pixelDataOffset); err != nil {
-		return fmt.Errorf("failed to write pixel data: %w", err)
+		return fmt.Errorf("failed to write BMP header: %w", err)
 	}
 
-	// DIB header (40 B)
-	binary.Write(f, binary.LittleEndian, uint32(40)) // DIB header size
-	binary.Write(f, binary.LittleEndian, int32(img.Width))
-	binary.Write(f, binary.LittleEndian, int32(img.Height))
-	binary.Write(f, binary.LittleEndian, uint16(1))   // Color planes
-	binary.Write(f, binary.LittleEndian, uint16(24))  // Bits per pixel
-	binary.Write(f, binary.LittleEndian, uint32(0))   // BI_RGB: No compression
-	binary.Write(f, binary.LittleEndian, uint32(0))   // Image size
-	binary.Write(f, binary.LittleEndian, int32(2835)) // Horizontal resolution (72 dpi)
-	binary.Write(f, binary.LittleEndian, int32(2835)) // Vertical resolution (72 dpi)
-	binary.Write(f, binary.LittleEndian, uint32(0))   // Colors in color table
-	binary.Write(f, binary.LittleEndian, uint32(0))   // Important color count
+	if err := writeDIBHeader(f, img.Height, img.Width); err != nil {
+		return fmt.Errorf("failed to write DIB header: %w", err)
+	}
 
 	// Pixel data
 	padding := (4 - (img.Width*3)%4) % 4
@@ -105,6 +94,30 @@ func writeBMPHeader(f *os.File, filesize, pixelDataOffset int) error {
 		uint32(filesize),
 		uint32(0), // Reserved
 		uint32(pixelDataOffset),
+	}
+
+	for _, v := range header {
+		if err := binary.Write(f, binary.LittleEndian, v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func writeDIBHeader(f *os.File, width, height int) error {
+	// DIB file header (40 B)
+	header := []interface{}{
+		uint32(40), // DIB header size
+		int32(width),
+		int32(height),
+		uint16(1),   // Color planes
+		uint16(24),  // Bits per pixel
+		uint32(0),   // BI_RGB: No compression
+		uint32(0),   // Image size
+		int32(2835), // Horizontal resolution (72 dpi)
+		int32(2835), // Vertical resolution (72 dpi)
+		uint32(0),   // Colors in color table
+		uint32(0),   // Important color count
 	}
 
 	for _, v := range header {
