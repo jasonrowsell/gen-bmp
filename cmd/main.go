@@ -14,11 +14,9 @@ type Color struct {
 }
 
 type Image struct {
-	Width    int
-	Height   int
-	Colors   [][]Color
-	getColor func(y, x int) (Color, error)
-	setColor func(c Color, y, x int) error
+	Width  int
+	Height int
+	Colors [][]Color
 }
 
 func NewImage(height, width int) *Image {
@@ -31,22 +29,22 @@ func NewImage(height, width int) *Image {
 		img.Colors[i] = make([]Color, width)
 	}
 
-	img.getColor = func(y, x int) (Color, error) {
-		if y < 0 || y >= height || x < 0 || x >= width {
-			return Color{}, errors.Errorf("out of bounds (%d, %d)", x, y)
-		}
-		return img.Colors[y][x], nil
-	}
-
-	img.setColor = func(c Color, y, x int) error {
-		if y < 0 || y >= height || x < 0 || x >= width {
-			return errors.Errorf("out of bounds (%d, %d)", x, y)
-		}
-		img.Colors[y][x] = c
-		return nil
-	}
-
 	return img
+}
+
+func (img *Image) getColor(y, x int) (Color, error) {
+	if y < 0 || y >= img.Height || x < 0 || x >= img.Width {
+		return Color{}, errors.Errorf("out of bounds (%d, %d)", x, y)
+	}
+	return img.Colors[y][x], nil
+}
+
+func (img *Image) setColor(c Color, y, x int) error {
+	if y < 0 || y >= img.Height || x < 0 || x >= img.Width {
+		return errors.Errorf("out of bounds (%d, %d)", x, y)
+	}
+	img.Colors[y][x] = c
+	return nil
 }
 
 func (img *Image) Export(path string) error {
