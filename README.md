@@ -1,6 +1,7 @@
 # BMP Generator
 
 Creates and exports images as BMP files.
+https://en.wikipedia.org/wiki/BMP_file_format
 
 ```sh
 go run main.go
