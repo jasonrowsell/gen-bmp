@@ -115,23 +115,23 @@ func writeDIBHeader(f *os.File, width, height int) error {
 
 func writePixelData(f *os.File, img *Image) error {
 	padding := (4 - (img.Width*3)%4) % 4
+	buffer := make([]byte, img.Width*3+padding) // Add padding to ensure each row is a multiple of 4 bytes
 
 	for y := img.Height - 1; y >= 0; y-- { // BMP stores rows bottom-to-top
 		for x := 0; x < img.Width; x++ {
 			c, err := img.getColor(y, x)
-			if err == nil {
-				_, err := f.Write([]byte{
-					byte(c.B * 255),
-					byte(c.G * 255),
-					byte(c.R * 255),
-				})
-				if err != nil {
-					return err
-				}
+			if err != nil {
+				return fmt.Errorf("failed to get color at (%d, %d)", x, y)
 			}
+			i := x * 3
+			buffer[i] = byte(c.B * 255)
+			buffer[i+1] = byte(c.G * 255)
+			buffer[i+2] = byte(c.R * 255)
 		}
-		// Add padding to ensure each row is a multiple of 4 bytes
-		f.Write(make([]byte, padding))
+
+		if _, err := f.Write(buffer); err != nil {
+			return err
+		}
 	}
 	return nil
 }
