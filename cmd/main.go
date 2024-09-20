@@ -56,12 +56,12 @@ func (img *Image) Export(path string) error {
 
 	// BMP header 14 B + DIB header 40 B + Pixel data 3 B per pixel (BGR)
 	filesize := 14 + 40 + 3*img.Width*img.Height
+	// Pixel data offset (14+40)
+	pixelDataOffset := 54
 
-	// BMP file header (14 B)
-	f.Write([]byte("BM")) // Signature
-	binary.Write(f, binary.LittleEndian, uint32(filesize))
-	binary.Write(f, binary.LittleEndian, uint32(0))  // Reserved
-	binary.Write(f, binary.LittleEndian, uint32(54)) // Pixel data offset (14+40)
+	if err := writeBMPHeader(f, filesize, pixelDataOffset); err != nil {
+		return fmt.Errorf("failed to write pixel data: %w", err)
+	}
 
 	// DIB header (40 B)
 	binary.Write(f, binary.LittleEndian, uint32(40)) // DIB header size
@@ -94,6 +94,23 @@ func (img *Image) Export(path string) error {
 		}
 		// Add padding to ensure each row is a multiple of 4 bytes
 		f.Write(make([]byte, padding))
+	}
+	return nil
+}
+
+func writeBMPHeader(f *os.File, filesize, pixelDataOffset int) error {
+	// BMP file header (14 B)
+	header := []interface{}{
+		[2]byte{'B', 'M'},
+		uint32(filesize),
+		uint32(0), // Reserved
+		uint32(pixelDataOffset),
+	}
+
+	for _, v := range header {
+		if err := binary.Write(f, binary.LittleEndian, v); err != nil {
+			return err
+		}
 	}
 	return nil
 }
