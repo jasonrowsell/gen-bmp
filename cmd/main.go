@@ -97,3 +97,25 @@ func (img *Image) Export(path string) error {
 	}
 	return nil
 }
+
+func main() {
+	img := NewImage(100, 100)
+
+	// Fill image with gradient
+	for y := 0; y < img.Height; y++ {
+		for x := 0; x < img.Width; x++ {
+			img.SetColor(Color{
+				R: float32(y) / float32(img.Height),
+				G: float32(x) / float32(img.Width),
+				B: 0.5,
+			}, y, x)
+		}
+	}
+
+	if err := img.Export("gradient.bmp"); err != nil {
+		fmt.Printf("Failed to export image: %v\n", err)
+		return
+	}
+
+	fmt.Println("Image exported successfully")
+}
