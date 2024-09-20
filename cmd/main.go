@@ -11,16 +11,12 @@ type Color struct {
 	R, G, B float32
 }
 
-type GetColor func(x, y int) (Color, error)
-type SetColor func(c Color, x, y int) error
-
 type Image struct {
 	Width    int
 	Height   int
 	Colors   [][]Color
-	GetColor GetColor
-	SetColor SetColor
-	mu       sync.RWMutex
+	getColor func(y, x int) (Color, error)
+	setColor func(c Color, y, x int) error
 }
 
 func NewImage(height, width int) *Image {
@@ -33,21 +29,17 @@ func NewImage(height, width int) *Image {
 		img.Colors[i] = make([]Color, width)
 	}
 
-	img.GetColor = func(y, x int) (Color, error) {
+	img.getColor = func(y, x int) (Color, error) {
 		if y < 0 || y >= height || x < 0 || x >= width {
 			return Color{}, fmt.Errorf("out of bounds (%d, %d)", y, x)
 		}
-		img.mu.RLock()
-		defer img.mu.RUnlock()
 		return img.Colors[y][x], nil
 	}
 
-	img.SetColor = func(c Color, y, x int) error {
+	img.setColor = func(c Color, y, x int) error {
 		if y < 0 || y >= height || x < 0 || x >= width {
 			return fmt.Errorf("out of bounds (%d, %d)", y, x)
 		}
-		img.mu.Lock()
-		defer img.mu.Unlock()
 		img.Colors[y][x] = c
 		return nil
 	}
@@ -88,7 +80,7 @@ func (img *Image) Export(path string) error {
 	padding := (4 - (img.Width*3)%4) % 4
 	for y := img.Height - 1; y >= 0; y-- { // BMP stores rows bottom-to-top
 		for x := 0; x < img.Width; x++ {
-			c, err := img.GetColor(y, x)
+			c, err := img.getColor(y, x)
 			if err == nil {
 				_, err := f.Write([]byte{
 					byte(c.B * 255),
@@ -107,7 +99,7 @@ func (img *Image) Export(path string) error {
 }
 
 func main() {
-	img := NewImage(100, 100)
+	img := NewImage(1000, 1000)
 
 	// Fill image with gradient
 	var wg sync.WaitGroup
@@ -116,7 +108,7 @@ func main() {
 		go func(y int) {
 			defer wg.Done()
 			for x := 0; x < img.Width; x++ {
-				img.SetColor(Color{
+				img.setColor(Color{
 					R: float32(y) / float32(img.Height),
 					G: float32(x) / float32(img.Width),
 					B: 0.5,

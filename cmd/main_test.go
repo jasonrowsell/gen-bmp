@@ -28,22 +28,22 @@ func TestBoundaryConditions(t *testing.T) {
 	img := NewImage(5, 5)
 	c := Color{R: 1, G: 0, B: 0}
 
-	err := img.SetColor(c, 0, 0)
+	err := img.setColor(c, 0, 0)
 	if err != nil {
 		t.Errorf("Unexpected error setting color at (0, 0): %v", err)
 	}
 
-	_, err = img.GetColor(4, 4)
+	_, err = img.getColor(4, 4)
 	if err != nil {
 		t.Errorf("Unexpected error getting color at (4, 4): %v", err)
 	}
 
-	err = img.SetColor(c, -1, 0)
+	err = img.setColor(c, -1, 0)
 	if err == nil {
 		t.Error("Expected error for out-of-bounds, but got nil")
 	}
 
-	_, err = img.GetColor(5, 5)
+	_, err = img.getColor(5, 5)
 	if err == nil {
 		t.Error("Expected error for out-of-bounds, but got nil")
 	}
@@ -59,11 +59,11 @@ func TestConcurrentAccess(t *testing.T) {
 			wg.Add(1)
 			go func(x, y int) {
 				defer wg.Done()
-				err := img.SetColor(c, y, x)
+				err := img.setColor(c, y, x)
 				if err != nil {
 					t.Errorf("Unexpected error setting color: %v", err)
 				}
-				retrieved, err := img.GetColor(y, x)
+				retrieved, err := img.getColor(y, x)
 				if err != nil {
 					t.Errorf("Unexpected error getting color: %v", err)
 				}
@@ -81,7 +81,7 @@ func TestExport(t *testing.T) {
 	color := Color{R: 0.5, G: 0.5, B: 0.5}
 	for y := 0; y < img.Height; y++ {
 		for x := 0; x < img.Width; x++ {
-			img.SetColor(color, y, x)
+			img.setColor(color, y, x)
 		}
 	}
 
