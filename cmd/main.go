@@ -65,25 +65,10 @@ func (img *Image) Export(path string) error {
 		return fmt.Errorf("failed to write DIB header: %w", err)
 	}
 
-	// Pixel data
-	padding := (4 - (img.Width*3)%4) % 4
-	for y := img.Height - 1; y >= 0; y-- { // BMP stores rows bottom-to-top
-		for x := 0; x < img.Width; x++ {
-			c, err := img.getColor(y, x)
-			if err == nil {
-				_, err := f.Write([]byte{
-					byte(c.B * 255),
-					byte(c.G * 255),
-					byte(c.R * 255),
-				})
-				if err != nil {
-					return fmt.Errorf("failed to write pixel data: %w", err)
-				}
-			}
-		}
-		// Add padding to ensure each row is a multiple of 4 bytes
-		f.Write(make([]byte, padding))
+	if err := writePixelData(f, img); err != nil {
+		return fmt.Errorf("failed to write pixel data: %w", err)
 	}
+
 	return nil
 }
 
@@ -124,6 +109,29 @@ func writeDIBHeader(f *os.File, width, height int) error {
 		if err := binary.Write(f, binary.LittleEndian, v); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func writePixelData(f *os.File, img *Image) error {
+	padding := (4 - (img.Width*3)%4) % 4
+
+	for y := img.Height - 1; y >= 0; y-- { // BMP stores rows bottom-to-top
+		for x := 0; x < img.Width; x++ {
+			c, err := img.getColor(y, x)
+			if err == nil {
+				_, err := f.Write([]byte{
+					byte(c.B * 255),
+					byte(c.G * 255),
+					byte(c.R * 255),
+				})
+				if err != nil {
+					return err
+				}
+			}
+		}
+		// Add padding to ensure each row is a multiple of 4 bytes
+		f.Write(make([]byte, padding))
 	}
 	return nil
 }
