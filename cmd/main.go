@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"sync"
 )
 
 type Color struct {
@@ -19,9 +20,10 @@ type Image struct {
 	Colors   [][]Color
 	GetColor GetColor
 	SetColor SetColor
+	mu       sync.RWMutex
 }
 
-func NewImage(width, height int) *Image {
+func NewImage(height, width int) *Image {
 	img := &Image{
 		Width:  width,
 		Height: height,
@@ -35,6 +37,8 @@ func NewImage(width, height int) *Image {
 		if y < 0 || y >= height || x < 0 || x >= width {
 			return Color{}, fmt.Errorf("out of bounds (%d, %d)", y, x)
 		}
+		img.mu.RLock()
+		defer img.mu.RUnlock()
 		return img.Colors[y][x], nil
 	}
 
@@ -42,7 +46,8 @@ func NewImage(width, height int) *Image {
 		if y < 0 || y >= height || x < 0 || x >= width {
 			return fmt.Errorf("out of bounds (%d, %d)", y, x)
 		}
-
+		img.mu.Lock()
+		defer img.mu.Unlock()
 		img.Colors[y][x] = c
 		return nil
 	}
@@ -85,11 +90,14 @@ func (img *Image) Export(path string) error {
 		for x := 0; x < img.Width; x++ {
 			c, err := img.GetColor(y, x)
 			if err == nil {
-				f.Write([]byte{
+				_, err := f.Write([]byte{
 					byte(c.B * 255),
 					byte(c.G * 255),
 					byte(c.R * 255),
 				})
+				if err != nil {
+					return fmt.Errorf("failed to write pixel data: %w", err)
+				}
 			}
 		}
 		// Add padding to ensure each row is a multiple of 4 bytes
@@ -102,15 +110,21 @@ func main() {
 	img := NewImage(100, 100)
 
 	// Fill image with gradient
+	var wg sync.WaitGroup
+	wg.Add(img.Height)
 	for y := 0; y < img.Height; y++ {
-		for x := 0; x < img.Width; x++ {
-			img.SetColor(Color{
-				R: float32(y) / float32(img.Height),
-				G: float32(x) / float32(img.Width),
-				B: 0.5,
-			}, y, x)
-		}
+		go func(y int) {
+			defer wg.Done()
+			for x := 0; x < img.Width; x++ {
+				img.SetColor(Color{
+					R: float32(y) / float32(img.Height),
+					G: float32(x) / float32(img.Width),
+					B: 0.5,
+				}, y, x)
+			}
+		}(y)
 	}
+	wg.Wait()
 
 	if err := img.Export("gradient.bmp"); err != nil {
 		fmt.Printf("Failed to export image: %v\n", err)
