@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"sync"
+
+	"github.com/pkg/errors"
 )
 
 type Color struct {
@@ -31,14 +33,14 @@ func NewImage(height, width int) *Image {
 
 	img.getColor = func(y, x int) (Color, error) {
 		if y < 0 || y >= height || x < 0 || x >= width {
-			return Color{}, fmt.Errorf("out of bounds (%d, %d)", y, x)
+			return Color{}, errors.Errorf("out of bounds (%d, %d)", x, y)
 		}
 		return img.Colors[y][x], nil
 	}
 
 	img.setColor = func(c Color, y, x int) error {
 		if y < 0 || y >= height || x < 0 || x >= width {
-			return fmt.Errorf("out of bounds (%d, %d)", y, x)
+			return errors.Errorf("out of bounds (%d, %d)", x, y)
 		}
 		img.Colors[y][x] = c
 		return nil
@@ -50,7 +52,7 @@ func NewImage(height, width int) *Image {
 func (img *Image) Export(path string) error {
 	f, err := os.Create(path)
 	if err != nil {
-		return fmt.Errorf("failed to create file: %w", err)
+		return errors.Wrap(err, "failed to create file")
 	}
 	defer f.Close()
 
@@ -58,15 +60,15 @@ func (img *Image) Export(path string) error {
 	pixelDataOffset := 54                        // Pixel data offset (14+40)
 
 	if err := writeBMPHeader(f, filesize, pixelDataOffset); err != nil {
-		return fmt.Errorf("failed to write BMP header: %w", err)
+		return errors.Wrap(err, "failed to write BMP header")
 	}
 
 	if err := writeDIBHeader(f, img.Height, img.Width); err != nil {
-		return fmt.Errorf("failed to write DIB header: %w", err)
+		return errors.Wrap(err, "failed to write DIB header")
 	}
 
 	if err := writePixelData(f, img); err != nil {
-		return fmt.Errorf("failed to write pixel data: %w", err)
+		return errors.Wrap(err, "failed to write pixel data")
 	}
 
 	return nil
@@ -83,7 +85,7 @@ func writeBMPHeader(f *os.File, filesize, pixelDataOffset int) error {
 
 	for _, v := range header {
 		if err := binary.Write(f, binary.LittleEndian, v); err != nil {
-			return err
+			return errors.Wrap(err, "failed to write BMP header")
 		}
 	}
 	return nil
@@ -107,7 +109,7 @@ func writeDIBHeader(f *os.File, width, height int) error {
 
 	for _, v := range header {
 		if err := binary.Write(f, binary.LittleEndian, v); err != nil {
-			return err
+			return errors.Wrap(err, "failed to write DIB header")
 		}
 	}
 	return nil
@@ -121,7 +123,7 @@ func writePixelData(f *os.File, img *Image) error {
 		for x := 0; x < img.Width; x++ {
 			c, err := img.getColor(y, x)
 			if err != nil {
-				return fmt.Errorf("failed to get color at (%d, %d)", x, y)
+				return errors.Wrapf(err, "failed to get color at (%d, %d)", x, y)
 			}
 			i := x * 3
 			buffer[i] = byte(c.B * 255)
@@ -130,7 +132,7 @@ func writePixelData(f *os.File, img *Image) error {
 		}
 
 		if _, err := f.Write(buffer); err != nil {
-			return err
+			return errors.Wrap(err, "failed to write pixel data")
 		}
 	}
 	return nil
